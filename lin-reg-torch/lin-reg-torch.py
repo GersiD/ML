@@ -68,7 +68,7 @@ class Lin_Reg_Torch(nn.Module):
 def fit_manual(X, Y, epochs):
     print("Fitting manual linear regression model")
     model = Lin_Reg_Torch_Manual(X.shape[1], Y.shape[1])
-    losses = model.fit(X, Y, 50)
+    losses = model.fit(X, Y, epochs)
     # plot losses
     # plt.plot(losses)
     # plt.xlabel('Epoch')
@@ -81,7 +81,7 @@ def fit_manual(X, Y, epochs):
 def fit_torch(X, Y, epochs):
     print("Fitting PyTorch linear regression model")
     model = Lin_Reg_Torch(X.shape[1], Y.shape[1])
-    losses = model.fit(X, Y, 50)
+    losses = model.fit(X, Y, epochs)
     # plot losses
     # plt.plot(losses)
     # plt.xlabel('Epoch')
