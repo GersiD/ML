@@ -24,7 +24,7 @@ By manual I mean that the model is implemented from scratch using numpy and torc
 And by torch I mean that the model is implemented using the torch.nn.Linear module.
 
 ```text
-Notice the poor performance of the manual implementation of logistic regression. 
+*Notice the poor performance of the manual implementation of logistic regression*. 
 This is due to the fact that the gradient is small and the step size is not chosen well.
 The torch implementation uses the SGD (stochastic gradient decent) optimizer which adapts the step size based on the gradient.
 ```
