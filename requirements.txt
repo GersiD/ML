@@ -3,3 +3,4 @@ ucimlrepo
 torch
 numpy
 matplotlib
+scikit-learn

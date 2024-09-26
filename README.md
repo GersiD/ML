@@ -21,11 +21,12 @@ Here I will list links to different files in the repo that fit into the main buc
 
 ### Regression
 
-[Linear Regression](./lin-reg-torch/lin-reg-torch.py)
-[Neural Nets](./nn-torch/nn-torch.py)
+[Linear Regression](./lin-reg-torch)
+[Neural Nets](./nn-torch)
 
 ### Classification
-[Logistic Regression](./log-reg-torch/log-reg-torch.py)
-[Neural Nets](./nn-torch/nn-torch.py)
+[Logistic Regression](./log-reg-torch)
+[Neural Nets](./nn-torch)
+[SVMs](./svm)
 
 ### The others....
