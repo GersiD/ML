@@ -128,10 +128,5 @@ def main():
     plt.savefig('./plots/loss_vs_epoch_manual_vs_torch.pdf')
     plt.show()
 
-    
-
-    
-
-
 if __name__ == '__main__':
     main()
