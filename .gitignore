@@ -1,2 +1,4 @@
 data/*.csv
 venv
+RL/PPO/__pycache__
+RL/PPO/ppo.pth
