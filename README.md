@@ -29,4 +29,7 @@ Here I will list links to different files in the repo that fit into the main buc
 [Neural Nets](./nn-torch)
 [SVMs](./svm)
 
+### Reinforcement Learning
+[PPO](./RL/PPO/)
+
 ### The others....
