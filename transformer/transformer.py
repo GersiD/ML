@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 class LayerNorm(nn.Module):
     """
     Layer normalization module
+
+    2016 Paper showed that this applied in the forward pass of the network improves training time.
     """
     def __init__(self, layer_size, eps=1e-6):
         super(LayerNorm, self).__init__()
@@ -39,7 +41,8 @@ class SubLayerConnection(nn.Module): # TODO: What is this?
 
     def forward(self, x, sublayer):
         """Apply residual connection to any sublayer with the same size.""" # TODO what does residual connection mean?
-        return x + self.dropout(sublayer(self.norm(x)))
+        # Don't apply norm on the outside since whoever calls this will do it
+        return x + self.dropout(sublayer(self.norm(x))) 
 
 class PositionwiseFeedForward(nn.Module):
     """linear(max(0, linear(x)))""" # TODO why do we care about this?
@@ -229,14 +232,14 @@ class Batch:
     def subsequent_mask(size):
         """Mask out subsequent positions."""
         attn_shape = (1, size, size)
-        subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
+        subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8') # TODO: How do we know to do this?
         return torch.from_numpy(subsequent_mask) == 0
 
     @staticmethod
     def make_std_mask(tgt, pad):
         """Create a mask to hide padding and future words."""
         tgt_mask = (tgt != pad).unsqueeze(-2)
-        tgt_mask = tgt_mask & Variable(Batch.subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
+        tgt_mask = tgt_mask & Variable(Batch.subsequent_mask(tgt.size(-1)).type(tgt_mask.data.type()))
         return tgt_mask
 
 def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=1024, h=8, dropout=0.1):
@@ -333,14 +336,6 @@ def get_std_opt(model):
     return NoamOpt(model.src_embed[0].d_model, 2, 4000,
             torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
-def data_gen(V, batch, nbatches):
-    for i in range(nbatches):
-        data = torch.from_numpy(np.random.randint(1, V, size=(batch, 10)))
-        data[:, 0] = 1
-        src = Variable(data, requires_grad=False)
-        tgt = Variable(data, requires_grad=False)
-        yield Batch(src, tgt, 0)
-
 class SimpleLoss:
     def __init__(self, generator, criterion, optim=None):
         self.generator = generator
@@ -361,6 +356,14 @@ criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
 model = make_model(V, V, N=2)
 model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
         torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+
+def data_gen(V, batch, nbatches):
+    for i in range(nbatches):
+        data = torch.from_numpy(np.random.randint(1, V, size=(batch, 10)))
+        data[:, 0] = 1 # TODO: What does this do? Removing it doesnt change anything
+        src = Variable(data, requires_grad=False)
+        tgt = Variable(data, requires_grad=False)
+        yield Batch(src, tgt, 0)
 
 for epoch in range(10):
     model.train()
