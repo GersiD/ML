@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
+# Credit : https://nlp.seas.harvard.edu/2018/04/03/attention.html
 
 class LayerNorm(nn.Module):
     """
