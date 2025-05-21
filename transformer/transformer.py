@@ -291,7 +291,7 @@ class LabelSmoothing(nn.Module):
         
     def forward(self, x, target):
         assert x.size(1) == self.size
-        true_dist = x.data.clone()
+        true_dist = torch.zeros_like(x)
         true_dist.fill_(self.smoothing / (self.size - 2))
         true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
         true_dist[:, self.padding_idx] = 0
@@ -335,6 +335,7 @@ def get_std_opt(model):
 def data_gen(V, batch, nbatches):
     for i in range(nbatches):
         data = torch.from_numpy(np.random.randint(1, V, size=(batch, 10)))
+        data[:, 0] = 1
         src = Variable(data, requires_grad=False)
         tgt = Variable(data, requires_grad=False)
         yield Batch(src, tgt, 0)
@@ -345,15 +346,14 @@ class SimpleLoss:
         self.criterion = criterion
         self.optim = optim
 
-    def __call__(self, out, target, norm):
-        out = self.generator(out)
-        loss = self.criterion(out.contiguous().view(-1, out.size(-1)), target.contiguous().view(-1) / norm)
+    def __call__(self, x, y, norm):
+        x = self.generator(x)
+        loss = self.criterion(x.contiguous().view(-1, x.size(-1)), y.contiguous().view(-1))/norm
         loss.backward()
         if self.optim is not None:
             self.optim.step()
             self.optim.optimizer.zero_grad()
-        return loss.data[0] * norm
-
+        return loss.data.item() * norm
 # Train the simple copy task.
 V = 11
 criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
@@ -363,8 +363,6 @@ model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
 
 for epoch in range(10):
     model.train()
-    run_epoch(data_gen(V, 30, 20), model, 
-              SimpleLoss(model.generator, criterion, model_opt))
+    run_epoch(data_gen(V, 30, 20), model, SimpleLoss(model.generator, criterion, model_opt))
     model.eval()
-    print(run_epoch(data_gen(V, 30, 5), model, 
-                    SimpleLoss(model.generator, criterion, None)))
+    run_epoch(data_gen(V, 30, 5), model, SimpleLoss(model.generator, criterion, None))
