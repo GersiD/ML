@@ -260,7 +260,7 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=1024, h=8, dropout=0
     # This was important from the original code
     for p in model.parameters():
         if p.dim() > 1:
-            nn.init.xavier_uniform_(p) # TODO: What does this do?
+            nn.init.xavier_uniform_(p)
     
     return model
 
@@ -286,7 +286,6 @@ class LabelSmoothing(nn.Module):
     "Implement label smoothing."
     def __init__(self, size, padding_idx, smoothing=0.0):
         super(LabelSmoothing, self).__init__()
-        self.criterion = nn.KLDivLoss(size_average=False)
         self.padding_idx = padding_idx
         self.confidence = 1.0 - smoothing
         self.smoothing = smoothing
@@ -303,7 +302,7 @@ class LabelSmoothing(nn.Module):
         if mask.dim() > 0:
             true_dist.index_fill_(0, mask.squeeze(), 0.0)
         self.true_dist = true_dist
-        return self.criterion(x, Variable(true_dist, requires_grad=False))
+        return nn.KLDivLoss(size_average=False)(x, Variable(true_dist, requires_grad=False))
 
 class NoamOpt:
     "Optim wrapper that implements rate."
@@ -352,7 +351,7 @@ class SimpleLoss:
         return loss.data.item() * norm
 # Train the simple copy task.
 V = 11
-criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
+criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.1)
 model = make_model(V, V, N=2)
 model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
         torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
@@ -368,5 +367,5 @@ def data_gen(V, batch, nbatches):
 for epoch in range(10):
     model.train()
     run_epoch(data_gen(V, 30, 20), model, SimpleLoss(model.generator, criterion, model_opt))
-    model.eval()
-    run_epoch(data_gen(V, 30, 5), model, SimpleLoss(model.generator, criterion, None))
+    # model.eval()
+    # run_epoch(data_gen(V, 30, 5), model, SimpleLoss(model.generator, criterion, None))
