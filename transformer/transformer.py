@@ -41,6 +41,19 @@ class PositionwiseFeedForward(nn.Module):
     def forward(self, x):
         return self.w2(self.dropout(F.relu(self.w1(x))))
 
+class Embeddings(nn.Module):
+    """
+    A standard embedding + positional encoding.
+    """
+    def __init__(self, d_model, vocab):
+        super(Embeddings, self).__init__()
+        self.lut = nn.Embedding(vocab, d_model) # lut is short for lookup table 
+        self.d_model = d_model # keep track for later use by optimizer
+        self.scale_term = math.sqrt(d_model)
+
+    def forward(self, x):
+        return self.lut(x) * self.scale_term
+
 class SubLayerConnection(nn.Module): # TODO: What is this?
     """
     A residual connection followed by a layer norm.
@@ -54,18 +67,6 @@ class SubLayerConnection(nn.Module): # TODO: What is this?
         """Apply residual connection to any sublayer with the same size.""" # TODO what does residual connection mean?
         # Don't apply norm on the outside since whoever calls this will do it
         return x + self.dropout(sublayer(self.norm(x))) 
-
-class Embeddings(nn.Module):
-    """
-    A standard embedding + positional encoding.
-    """
-    def __init__(self, d_model, vocab):
-        super(Embeddings, self).__init__()
-        self.lut = nn.Embedding(vocab, d_model)
-        self.d_model = d_model
-
-    def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model) # TODO: Why do we multiply by sqrt(d_model)?
 
 class PositionalEncoding(nn.Module):
     """
@@ -207,7 +208,7 @@ class MultiHeadedAttention(nn.Module):
 
     def attention(self, Q, K, V, mask = None, dropout = None):
         d_k = Q.size(-1) # TODO: What does size -1 mean
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k) # because we want to normalize the dot product to have mean 0 and variance 1
         if mask is not None:
             scores = scores.masked_fill(mask == 0, -1e9)
         p_attn = F.softmax(scores, dim = -1) # TODO What does dim -1 mean?
