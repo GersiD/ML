@@ -31,7 +31,10 @@ class LayerNorm(nn.Module):
         return x
 
 class PositionwiseFeedForward(nn.Module):
-    """linear(max(0, linear(x))) to further embed the input with its position in the sequence."""
+    """
+    linear(max(0, linear(x))) to further embed the input with its position in the sequence. 
+    This idea comes from ResNets.
+    """
     def __init__(self, d_model, d_ff, dropout=0.1):
         super(PositionwiseFeedForward, self).__init__()
         self.w1 = nn.Linear(d_model, d_ff)
@@ -104,7 +107,7 @@ class EncoderDecoder(nn.Module):
         return self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask)
 
     def encode(self, src, src_mask):
-        return self.encoder(self.src_embed(src), src_mask) # TODO: What does src_embed do?
+        return self.encoder(self.src_embed(src), src_mask)
     def decode(self, memory, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 
@@ -117,7 +120,7 @@ class Generator(nn.Module):
         self.proj = nn.Linear(d_model, vocab)
 
     def forward(self, x):
-        return F.log_softmax(self.proj(x), dim=-1) # Why dim -1?
+        return F.log_softmax(self.proj(x), dim=-1) # TODO: Why log_softmax?
 
 class Encoder(nn.Module):
     """
@@ -198,6 +201,9 @@ class MultiHeadedAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout) # TODO: What does this do?
 
     def forward(self, query, key, value, mask=None):
+        print("query shape: ", query.shape)
+        print("key shape: ", key.shape)
+        print("value shape: ", value.shape)
         if mask is not None:
             mask = mask.unsqueeze(1) # TODO: What does this do?
         nbatches = query.size(0)
@@ -206,14 +212,18 @@ class MultiHeadedAttention(nn.Module):
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
         return self.linears[-1](x)
 
-    def attention(self, Q, K, V, mask = None, dropout = None):
-        d_k = Q.size(-1) # TODO: What does size -1 mean
+    def attention(self, Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor, mask = None, dropout = None):
+        print("Q shape: ", Q.shape)
+        print("K shape: ", K.shape)
+        print("V shape: ", V.shape)
+        # exit(0)
+        d_k = Q.size(-1)
         scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k) # because we want to normalize the dot product to have mean 0 and variance 1
         if mask is not None:
             scores = scores.masked_fill(mask == 0, -1e9)
-        p_attn = F.softmax(scores, dim = -1) # TODO What does dim -1 mean?
+        p_attn = F.softmax(scores, dim = -1)
         if dropout is not None:
-            p_attn = dropout(p_attn) # TODO what does this do?
+            p_attn = dropout(p_attn)
         return torch.matmul(p_attn, V), p_attn
 
 class Batch:
@@ -251,11 +261,16 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=1024, h=8, dropout=0
     attn = MultiHeadedAttention(h, d_model)
     ff = PositionwiseFeedForward(d_model, d_ff, dropout)
     position = PositionalEncoding(d_model, dropout)
+    assert src_vocab == tgt_vocab, "Source and target vocab sizes must be the same for this model."
+    emb = Embeddings(d_model, src_vocab)
     model = EncoderDecoder(
         Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
         Decoder(DecoderLayer(d_model, c(attn), c(attn), c(ff), dropout), N),
-        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
-        nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
+        # different weights for src and tgt not what the 2017 paper did
+        # nn.Sequential(Embeddings(d_model, src_vocab), c(position)), 
+        # nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
+        nn.Sequential(emb, c(position)),
+        nn.Sequential(emb, c(position)),
         Generator(d_model, tgt_vocab))
     
     # This was important from the original code
@@ -271,6 +286,8 @@ def run_epoch(data_iter, model, loss_compute):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
+        print("Batch: ", i)
+        print("Batch src shape: ", batch.src.shape)
         out = model.forward(batch.src, batch.trg, batch.src_mask, batch.trg_mask)
         loss = loss_compute(out, batch.trg_y, batch.ntokens)
         total_loss += loss
@@ -331,10 +348,6 @@ class NoamOpt:
         return self.factor * \
             (self.model_size ** (-0.5) *
             min(step ** (-0.5), step * self.warmup ** (-1.5)))
-        
-def get_std_opt(model):
-    return NoamOpt(model.src_embed[0].d_model, 2, 4000,
-            torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
 class SimpleLoss:
     def __init__(self, generator, criterion, optim=None):
