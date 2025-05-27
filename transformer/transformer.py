@@ -30,6 +30,17 @@ class LayerNorm(nn.Module):
         x = self.alpha * ((x - mean) / (std + self.eps)) + self.bias
         return x
 
+class PositionwiseFeedForward(nn.Module):
+    """linear(max(0, linear(x))) to further embed the input with its position in the sequence."""
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super(PositionwiseFeedForward, self).__init__()
+        self.w1 = nn.Linear(d_model, d_ff)
+        self.w2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        return self.w2(self.dropout(F.relu(self.w1(x))))
+
 class SubLayerConnection(nn.Module): # TODO: What is this?
     """
     A residual connection followed by a layer norm.
@@ -44,17 +55,6 @@ class SubLayerConnection(nn.Module): # TODO: What is this?
         # Don't apply norm on the outside since whoever calls this will do it
         return x + self.dropout(sublayer(self.norm(x))) 
 
-class PositionwiseFeedForward(nn.Module):
-    """linear(max(0, linear(x)))""" # TODO why do we care about this?
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super(PositionwiseFeedForward, self).__init__()
-        self.w1 = nn.Linear(d_model, d_ff)
-        self.w2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        return self.w2(self.dropout(F.relu(self.w1(x))))
-
 class Embeddings(nn.Module):
     """
     A standard embedding + positional encoding.
@@ -65,7 +65,7 @@ class Embeddings(nn.Module):
         self.d_model = d_model
 
     def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model) # TODO: What does this do?
+        return self.lut(x) * math.sqrt(self.d_model) # TODO: Why do we multiply by sqrt(d_model)?
 
 class PositionalEncoding(nn.Module):
     """
