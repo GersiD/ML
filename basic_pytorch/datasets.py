@@ -19,9 +19,10 @@ class CNN(torch.nn.Module):
     """
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = torch.nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv1 = torch.nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1) # Input channels = 3 (RGB), Output channels = 32 Maps 3x32x32 to 32x32x32
+        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1) # Input channels = 32, Output channels = 64 Maps 32x32x32 to 64x32x32
+        # Downsample the feature maps To reduce the spatial dimensions and increase the receptive field
+        self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0) 
         self.fc1 = torch.nn.Linear(64 * 8 * 8, 512)
         self.fc2 = torch.nn.Linear(512, 10)
         self.relu = torch.nn.ReLU()
