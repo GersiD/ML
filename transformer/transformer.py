@@ -1,11 +1,9 @@
-from re import A
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
 # Credit : https://nlp.seas.harvard.edu/2018/04/03/attention.html
 
 class LayerNorm(nn.Module):
@@ -111,23 +109,25 @@ class PositionalEncoding(nn.Module):
         Add positional encoding to the input tensor x.
         x is expected to be of shape (batch_size, seq_len, d_model).
         """
-        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False)
+        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False) # pyright: ignore[reportIndexIssue]
         return self.dropout(x)
-#--------------------------------Understanding Stops Here---------------------------------------------------------------
-class SubLayerConnection(nn.Module): # TODO: What is this?
+
+class SubLayerConnection(nn.Module): # all those arrows in the diagram are sublayer connections
     """
     A residual connection followed by a layer norm.
     """
-    def __init__(self, size, dropout):
+    def __init__(self, size: int, dropout: float):
         super(SubLayerConnection, self).__init__()
         self.norm = LayerNorm(size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
-        """Apply residual connection to any sublayer with the same size.""" # TODO what does residual connection mean?
+        """
+        Apply residual connection to any sublayer with the same size.
+        Here residual connection means that the output of the sublayer is added to the input x.
+        """
         # Don't apply norm on the outside since whoever calls this will do it
         return x + self.dropout(sublayer(self.norm(x))) 
-
 
 class EncoderLayer(nn.Module):
     """
@@ -137,19 +137,21 @@ class EncoderLayer(nn.Module):
         super(EncoderLayer, self).__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
-        self.sublayer = nn.ModuleList([SubLayerConnection(size, dropout) for _ in range(2)]) # TODO: What is this?
+        self.sublayer = nn.ModuleList([SubLayerConnection(size, dropout) for _ in range(2)])
         self.size = size
 
     def forward(self, x, mask):
-        """TODO what does this do?""" # TODO
-        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask)) # TODO: What does this do?
+        """
+        Apply self-attention and feed forward to input x with the given mask. 
+        """
+        x = self.sublayer[0](x, lambda y: self.self_attn(y, y, y, mask)) # This applies self-attention to the input x with the mask
         return self.sublayer[1](x, self.feed_forward)
 
 class Encoder(nn.Module):
     """
     Core encoder is a stack of N EncoderLayer layers, this is what we mean by "Multi-Head Attention"
     """
-    def __init__(self, layer: EncoderLayer, N):
+    def __init__(self, layer: EncoderLayer, N: int):
         super(Encoder, self).__init__()
         self.layers = nn.ModuleList([copy.deepcopy(layer) for _ in range(N)]) 
         self.norm = LayerNorm(layer.size)
@@ -170,13 +172,15 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.sublayer = nn.ModuleList([SubLayerConnection(size, dropout) for _ in range(3)]) # TODO: What is this?
+        self.sublayer = nn.ModuleList([SubLayerConnection(size, dropout) for _ in range(3)])
 
     def forward(self, x, memory, src_mask, tgt_mask):
-        """TODO what does this do? NOTE MUTATES x.""" # TODO
+        """
+        Apply self-attention, source attention and feed forward to input x with the given masks.
+        """
         m = memory
-        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask)) # TODO: What does this do?
-        x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask)) # TODO: What does this do?
+        x = self.sublayer[0](x, lambda y: self.self_attn(y, y, y, tgt_mask))
+        x = self.sublayer[1](x, lambda y: self.src_attn(y, m, m, src_mask))
         return self.sublayer[2](x, self.feed_forward)
 
 class Decoder(nn.Module):
@@ -251,19 +255,16 @@ class MultiHeadedAttention(nn.Module):
     """
     def __init__(self, h:int, d_model:int, dropout:float=0.1):
         super(MultiHeadedAttention, self).__init__()
-        assert d_model % h == 0 # TODO: What does this mean?
+        assert d_model % h == 0
         self.d_k = d_model // h
         self.h = h
-        self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)]) # TODO: What does this do?
+        self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
         self.attn = None
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, query, key, value, mask=None):
-        # print("query shape: ", query.shape)
-        # print("key shape: ", key.shape)
-        # print("value shape: ", value.shape)
         if mask is not None:
-            mask = mask.unsqueeze(1) # TODO: What does this do?
+            mask = mask.unsqueeze(1)
         nbatches = query.size(0)
         query, key, value = [l(x).view(nbatches, -1, self.h, self.d_k).transpose(1, 2) for l, x in zip(self.linears, (query, key, value))]
         x, self.attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
@@ -271,10 +272,6 @@ class MultiHeadedAttention(nn.Module):
         return self.linears[-1](x)
 
     def attention(self, Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor, mask = None, dropout = None):
-        # print("Q shape: ", Q.shape)
-        # print("K shape: ", K.shape)
-        # print("V shape: ", V.shape)
-        # exit(0)
         d_k = Q.size(-1)
         scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k) # because we want to normalize the dot product to have mean 0 and variance 1
         if mask is not None:
@@ -387,7 +384,7 @@ class NoamOpt:
             min(step ** (-0.5), step * self.warmup ** (-1.5)))
 
 class SimpleLoss:
-    def __init__(self, generator:Generator, criterion:LabelSmoothing, optim:torch.optim.Optimizer):
+    def __init__(self, generator:Generator, criterion:LabelSmoothing, optim:NoamOpt):
         self.generator = generator
         self.criterion = criterion
         self.optim = optim
@@ -406,7 +403,7 @@ model_opt = NoamOpt(model.d_model, 1, 400,
         torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
 def data_gen(V, batch, nbatches):
-    for i in range(nbatches):
+    for _ in range(nbatches):
         data = torch.from_numpy(np.random.randint(1, V, size=(batch, 10)))
         data[:, 0] = 1 # TODO: What does this do? Removing it doesnt change anything
         src = Variable(data, requires_grad=False)
