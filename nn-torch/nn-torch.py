@@ -9,17 +9,26 @@ from sklearn.model_selection import train_test_split
 class NN_Torch(nn.Module):
     def __init__(self, xdims, ydims) -> None:
         super(NN_Torch, self).__init__()
-        self.linear1 = nn.Linear(xdims, 64)
-        self.linear2 = nn.Linear(64, 64)
-        self.dropout = nn.Dropout(0.2)
-        self.linear3 = nn.Linear(64, ydims)
+        self.network = nn.Sequential(
+            nn.Linear(xdims, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(32, ydims)
+        )
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
 
     def forward(self, x):
-        x = torch.relu(self.linear1(x))
-        x = torch.relu(self.linear2(x))
-        x = self.dropout(x)
-        return self.linear3(x)
+        return self.network(x)
 
     def loss(self, y_pred, y):
         return nn.functional.mse_loss(y_pred, y)
@@ -51,21 +60,22 @@ def fit_torch(X, Y, epochs):
     plt.xlabel('Epoch')
     plt.ylabel('Loss MSE')
     plt.title('Loss vs. Epoch for PyTorch NN')
-    plt.savefig('./plots/loss_vs_epoch_torch.pdf')
+    plt.savefig('./nn-torch/plots/loss_vs_epoch_torch.pdf')
     plt.show()
     return model, losses
 
 def assess_torch(X, Y, model):
     print("Assessing PyTorch NN model")
     y_pred = model.forward(X)
-    accuracy = nn.functional.mse_loss(y_pred, Y)
-    print(f"Accuracy: {accuracy.item()}")
+    accuracy = abs((y_pred - Y).mean())
+    print(f"Test loss (Mean Abs Error): {accuracy.item()}")
 
 
 def main():
     torch.manual_seed(8675309)
     # Example of training a NN model to predict probability of high wine quality
-    df = pd.read_csv('../data/wine_quality.csv')
+    assert os.getcwd().endswith('ML')
+    df = pd.read_csv('./data/wine_quality.csv')
     # print(df[["fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol"]].head())
     X = df[["fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol"]]
     y = df[["quality"]]
