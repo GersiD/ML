@@ -1,7 +1,7 @@
 # Future Work
 
 ## Implement
-- Value Iteration
+- [x] Value Iteration
 - Policy Iteration
 - Monte Carlo Methods
 - Temporal Difference Learning
