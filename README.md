@@ -36,3 +36,8 @@ respective directories. Beyond that please reference [ISLR](https://www.statlear
 [PPO](./RL/PPO/)
 
 ### The others....
+
+# References and Further Reading
+- [An Introduction to Statistical Learning (ISLR)](https://www.statlearning.com/)
+- [RL: Sutton, R. S., & Barto, A. (2018). Reinforcement learning: An introduction.](http://incompleteideas.net/book/the-book-2nd.html)
+- [RL: Szepesvari, C. (2013), Algorithms for Reinforcement Learning](https://sites.ualberta.ca/~szepesva/papers/RLAlgsInMDPs.pdf)
