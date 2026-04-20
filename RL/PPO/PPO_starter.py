@@ -1,7 +1,3 @@
-# Description: Implementation of Proximal Policy Optimization (PPO) algorithm.
-# Author Gersi Doko
-# Implemented while referencing the following sources:
-# https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO_colab.ipynb
 import torch
 import gymnasium as gym
 import datetime
@@ -89,46 +85,8 @@ class PPO:
         Update the policy using the PPO algorithm.
         Uses the experiences stored in the buffer to update the policy.
         """
-        # Monte Carlo estimate of state rewards:
-        rewards = []
-        discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
 
-        # Normalizing the rewards:
-        # why normalize the rewards?
-        # Variance reduction for training
-        rewards = torch.tensor(rewards).to(device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
-        # convert list to tensor
-        old_states = torch.stack(self.buffer.states).to(device).detach()
-        old_actions = torch.stack(self.buffer.actions).to(device).detach()
-        old_logprobs = torch.stack(self.buffer.logprobs).to(device).detach()
-        old_values = torch.stack(self.buffer.state_values).to(device).detach()
-        advantages = rewards.detach() - old_values.detach()
-
-        # Optimize policy for K epochs:
-        for _ in range(self.epochs):
-            # Evaluating old actions and values :
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-
-            # Finding the ratio (pi_theta / pi_theta__old):
-            ratios = torch.exp(logprobs - old_logprobs.detach())
-
-            # Finding Surrogate Loss:
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
-            actor_loss = -torch.min(surr1, surr2) + 0.5*torch.nn.functional.mse_loss(state_values, rewards) - 0.01*dist_entropy
-
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss = actor_loss.mean()
-            loss.backward()
-            self.optimizer.step()
+        # TODO: Implement the PPO update algorithm using the experiences stored in self.buffer
 
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())

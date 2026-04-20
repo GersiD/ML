@@ -5,3 +5,4 @@ torchvision
 numpy
 matplotlib
 scikit-learn
+gymnasium
