@@ -22,4 +22,4 @@ starter code will output a plot of the rewards per episode, and you should see a
 
 An example of the rewards per episode plot for the working implementation of PPO is shown below, note that the rewards should steadily improve as the agent learns to navigate the environment, however due to the stochastic nature of the environment and the learning process, there may be some fluctuations in the rewards.
 
-[./ppo_training_reward.png]
+![PPO Rewards Plot](./ppo_training_reward.png)
